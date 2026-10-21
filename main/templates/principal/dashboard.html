@@ -1,0 +1,623 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard — SmartCustomer Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── KPI Cards ─────────────────────────────────────── */
+    .kpi-card {
+        border: none;
+        border-radius: 16px;
+        padding: 1.25rem 1.5rem;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        position: relative;
+        overflow: hidden;
+        animation: fadeUp 0.4s ease both;
+    }
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: -30px; right: -30px;
+        width: 90px; height: 90px;
+        border-radius: 50%;
+        opacity: 0.12;
+        background: white;
+    }
+    .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,0.13); }
+
+    .kpi-total    { background: linear-gradient(135deg, #6366f1, #818cf8); color: white; }
+    .kpi-vip      { background: linear-gradient(135deg, #059669, #34d399); color: white; }
+    .kpi-ca       { background: linear-gradient(135deg, #0ea5e9, #38bdf8); color: white; }
+    .kpi-score    { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: white; }
+    .kpi-actifs   { background: linear-gradient(135deg, #8b5cf6, #a78bfa); color: white; }
+    .kpi-nouveaux { background: linear-gradient(135deg, #ec4899, #f472b6); color: white; }
+    .kpi-conv     { background: linear-gradient(135deg, #14b8a6, #2dd4bf); color: white; }
+    .kpi-mensuel  { background: linear-gradient(135deg, #f97316, #fb923c); color: white; }
+    .kpi-risque   { background: linear-gradient(135deg, #ef4444, #f87171); color: white; }
+    .kpi-fidel    { background: linear-gradient(135deg, #3b82f6, #60a5fa); color: white; }
+
+    .kpi-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+    .kpi-value { font-size: 1.9rem; font-weight: 800; line-height: 1.15; margin-top: 4px; }
+    .kpi-sub   { font-size: 0.72rem; opacity: 0.78; margin-top: 2px; }
+    .kpi-icon  { position: absolute; right: 14px; top: 14px; font-size: 1.5rem; opacity: 0.28; }
+
+    /* ── Section headers ─────────────────────────────── */
+    .section-title {
+        font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.1em; color: #64748b; margin: 1.6rem 0 0.9rem;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::after { content:''; flex:1; height:1px; background:#e2e8f0; }
+
+    /* ── Chart cards ─────────────────────────────────── */
+    .chart-card {
+        background: white; border: 1px solid #e2e8f0; border-radius: 16px;
+        padding: 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        transition: box-shadow 0.2s;
+    }
+    .chart-card:hover { box-shadow: 0 6px 22px rgba(0,0,0,0.06); }
+    .chart-card h5 {
+        font-size: 0.9rem; font-weight: 700; color: #1e293b;
+        margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;
+    }
+    .chart-card h5 i { color: #6366f1; }
+
+    /* ── Progress bars ───────────────────────────────── */
+    .seg-bar { height: 8px; border-radius: 4px; background: #f1f5f9; overflow: hidden; }
+    .seg-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+
+    /* ── Quick links ─────────────────────────────────── */
+    .quick-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 7px 14px; border-radius: 10px; font-size: 0.82rem;
+        font-weight: 600; text-decoration: none; transition: all 0.2s;
+        border: 1.5px solid transparent;
+    }
+    .quick-btn-primary { background: #6366f1; color: white; }
+    .quick-btn-primary:hover { background: #4f46e5; color: white; }
+    .quick-btn-outline { border-color: #e2e8f0; color: #475569; background: white; }
+    .quick-btn-outline:hover { border-color: #6366f1; color: #6366f1; background: #eef2ff; }
+
+    /* ── Category badges ─────────────────────────────── */
+    .cat-badge { font-size:0.67rem; font-weight:700; padding:3px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:0.05em; }
+    .cat-badge-vip      { background:#dcfce7; color:#166534; }
+    .cat-badge-fidele   { background:#e0f2fe; color:#075985; }
+    .cat-badge-potentiel{ background:#fff7ed; color:#9a3412; }
+    .cat-badge-nouveau  { background:#f1f5f9; color:#475569; }
+
+    /* ── Animation ───────────────────────────────────── */
+    @keyframes fadeUp {
+        from { opacity:0; transform:translateY(12px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+
+    .doughnut-wrap { position:relative; height:230px; max-width:230px; margin:auto; }
+    .chart-wrap-md { position:relative; height:255px; }
+    .chart-wrap-sm { position:relative; height:210px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ PAGE HEADER ══════════════════════════════════════════════ -->
+<div class="page-header-container mt-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1 class="fw-bold mb-0 fs-4">
+                <i class="fa-solid fa-chart-line me-2"></i>Dashboard — Vue d'ensemble
+            </h1>
+            <p class="mb-0 mt-1 text-white-50 small">
+                Indicateurs clés · Graphiques · Tendances clients en temps réel
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-success px-3 py-2 rounded-pill">
+                <i class="fa-solid fa-circle-dot me-1"></i>Données Actives
+            </span>
+            <span class="badge bg-light text-dark px-3 py-2 rounded-pill">
+                <i class="fa-regular fa-clock me-1"></i>
+                {{ stats.total_clients }} client{% if stats.total_clients != 1 %}s{% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- ══ KPIs PRINCIPAUX (4 cartes) ══════════════════════════════ -->
+<div class="section-title"><i class="fa-solid fa-gauge-high"></i>Indicateurs Clés</div>
+<div class="row g-3 mb-2">
+    <div class="col-6 col-md-3">
+        <div class="kpi-card kpi-total">
+            <i class="fa-solid fa-users kpi-icon"></i>
+            <div class="kpi-label">Total Clients</div>
+            <div class="kpi-value">{{ stats.total_clients }}</div>
+            <div class="kpi-sub">Base de données complète</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="kpi-card kpi-vip">
+            <i class="fa-solid fa-crown kpi-icon"></i>
+            <div class="kpi-label">Clients VIP</div>
+            <div class="kpi-value">{{ stats.vip_count }}</div>
+            <div class="kpi-sub">Score ≥ 80</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="kpi-card kpi-ca">
+            <i class="fa-solid fa-wallet kpi-icon"></i>
+            <div class="kpi-label">Chiffre d'Affaires</div>
+            <div class="kpi-value">{{ stats.total_achats|floatformat:0 }}</div>
+            <div class="kpi-sub">FCFA — Total cumulé</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="kpi-card kpi-score">
+            <i class="fa-solid fa-star kpi-icon"></i>
+            <div class="kpi-label">Score Moyen</div>
+            <div class="kpi-value">{{ stats.score_moyen }}</div>
+            <div class="kpi-sub">Engagement comportemental</div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ NOUVEAUX KPIs (6 cartes) ════════════════════════════════ -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+        <div class="kpi-card kpi-actifs">
+            <i class="fa-solid fa-bolt kpi-icon"></i>
+            <div class="kpi-label">Actifs</div>
+            <div class="kpi-value">{{ stats.clients_actifs }}</div>
+            <div class="kpi-sub">≥ 1 visite</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="kpi-card kpi-nouveaux">
+            <i class="fa-solid fa-user-plus kpi-icon"></i>
+            <div class="kpi-label">Nouveaux</div>
+            <div class="kpi-value">{{ stats.nouveaux_clients }}</div>
+            <div class="kpi-sub">30 derniers jours</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="kpi-card kpi-conv">
+            <i class="fa-solid fa-arrow-trend-up kpi-icon"></i>
+            <div class="kpi-label">Conversion</div>
+            <div class="kpi-value">{{ stats.taux_conversion }}%</div>
+            <div class="kpi-sub">Clients ayant acheté</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="kpi-card kpi-mensuel">
+            <i class="fa-solid fa-calendar-check kpi-icon"></i>
+            <div class="kpi-label">CA Mensuel</div>
+            <div class="kpi-value">{{ stats.ca_mensuel|floatformat:0 }}</div>
+            <div class="kpi-sub">FCFA / 30 jours</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="kpi-card kpi-risque">
+            <i class="fa-solid fa-triangle-exclamation kpi-icon"></i>
+            <div class="kpi-label">À Risque</div>
+            <div class="kpi-value">{{ stats.clients_a_risque }}</div>
+            <div class="kpi-sub">Sans achat</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="kpi-card kpi-fidel">
+            <i class="fa-solid fa-heart kpi-icon"></i>
+            <div class="kpi-label">Fidélisation</div>
+            <div class="kpi-value">{{ stats.taux_fidelisation }}%</div>
+            <div class="kpi-sub">VIP + Fidèles</div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ ACCÈS RAPIDE ═════════════════════════════════════════════ -->
+<div class="chart-card mb-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <span style="font-size:0.85rem;font-weight:700;color:#1e293b;">
+            <i class="fa-solid fa-link me-2" style="color:#6366f1;"></i>Accès Rapide
+        </span>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'dashboard' %}" class="quick-btn quick-btn-primary"><i class="fa-solid fa-chart-line"></i>Dashboard</a>
+            <a href="{% url 'clients' %}"   class="quick-btn quick-btn-outline"><i class="fa-solid fa-users"></i>Clients</a>
+            <a href="{% url 'analyse' %}"   class="quick-btn quick-btn-outline"><i class="fa-solid fa-brain"></i>Comportements</a>
+            <a href="{% url 'powerbi' %}"   class="quick-btn quick-btn-outline"><i class="fa-solid fa-chart-column"></i>Analyses BI</a>
+            <a href="{% url 'ia' %}"        class="quick-btn quick-btn-outline"><i class="fa-solid fa-robot"></i>Analyses IA</a>
+            <a href="{% url 'uml' %}"       class="quick-btn quick-btn-outline"><i class="fa-solid fa-diagram-project"></i>UML</a>
+        </div>
+    </div>
+</div>
+
+{% if stats.total_clients %}
+
+<!-- ══ GRAPHIQUES : RÉPARTITION & ENGAGEMENT ═══════════════════ -->
+<div class="section-title"><i class="fa-solid fa-chart-pie"></i>Répartition & Engagement</div>
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="chart-card h-100">
+            <h5><i class="fa-solid fa-chart-pie"></i>Répartition par Catégorie</h5>
+            <div class="doughnut-wrap">
+                <canvas id="doughnutChart"></canvas>
+            </div>
+            <div class="d-flex flex-wrap justify-content-center gap-3 mt-3">
+                {% for item in chart_data %}
+                <div class="d-flex align-items-center gap-1" style="font-size:0.8rem;">
+                    <span style="width:10px;height:10px;border-radius:50%;background:{{ item.color }};display:inline-block;"></span>
+                    <strong>{{ item.label }}</strong> <span class="text-muted">({{ item.count }})</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="chart-card h-100">
+            <h5><i class="fa-solid fa-chart-bar"></i>Score Comportemental Moyen par Catégorie</h5>
+            <div class="chart-wrap-md">
+                <canvas id="barEngagementChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ GRAPHIQUES : ÉVOLUTIONS ══════════════════════════════════ -->
+<div class="section-title"><i class="fa-solid fa-arrow-trend-up"></i>Évolutions</div>
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="chart-card h-100">
+            <h5><i class="fa-solid fa-chart-line"></i>Évolution Cumulée des Ventes (FCFA)</h5>
+            <div class="chart-wrap-md">
+                <canvas id="lineVentesChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="chart-card h-100">
+            <h5><i class="fa-solid fa-eye"></i>Évolution des Visites par Client</h5>
+            <div class="chart-wrap-md">
+                <canvas id="barVisitesChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ GRAPHIQUES : PRODUITS & MENSUEL ═════════════════════════ -->
+<div class="section-title"><i class="fa-solid fa-boxes-stacked"></i>Produits & Performances Mensuelles</div>
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="chart-card h-100">
+            <h5><i class="fa-solid fa-box-open"></i>Produits les Plus Consultés (Top 6)</h5>
+            <div class="chart-wrap-md">
+                <canvas id="barProduitsChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="chart-card h-100">
+            <h5><i class="fa-solid fa-calendar-days"></i>Comparaison Mensuelle — Achats vs Visites</h5>
+            <div class="chart-wrap-md">
+                <canvas id="barMensuelChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ DÉTAILS & CLASSEMENTS ════════════════════════════════════ -->
+<div class="section-title"><i class="fa-solid fa-list-check"></i>Détails & Classements</div>
+<div class="row g-4 mb-5">
+
+    <!-- Volumes segmentation -->
+    <div class="col-lg-4">
+        <div class="chart-card h-100">
+            <h5><i class="fa-solid fa-layer-group"></i>Volumes de Segmentation</h5>
+            <div class="d-flex flex-column gap-3 mt-2">
+                {% for item in chart_data %}
+                <div>
+                    <div class="d-flex justify-content-between mb-1" style="font-size:0.82rem;">
+                        <span class="fw-semibold d-flex align-items-center gap-1">
+                            <span style="width:8px;height:8px;border-radius:50%;background:{{ item.color }};display:inline-block;"></span>
+                            {{ item.label }}
+                        </span>
+                        <span class="text-muted">{{ item.count }} · {{ item.percentage|floatformat:0 }}%</span>
+                    </div>
+                    <div class="seg-bar">
+                        <div class="seg-fill" style="width:{{ item.percentage|floatformat:0 }}%; background:{{ item.color }};"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Top 5 clients -->
+    <div class="col-lg-4">
+        <div class="chart-card h-100">
+            <h5><i class="fa-solid fa-crown" style="color:#f59e0b;"></i>Top 5 Clients (Meilleurs Scores)</h5>
+            {% if top_vip %}
+            <div class="d-flex flex-column gap-1">
+                {% for client in top_vip %}
+                <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                             style="width:32px;height:32px;font-size:0.75rem;background:linear-gradient(135deg,#6366f1,#3b82f6);flex-shrink:0;">
+                            {{ client.name|slice:":1"|upper }}
+                        </div>
+                        <div>
+                            <div class="fw-semibold" style="font-size:0.85rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ client.name }}</div>
+                            <div class="text-muted" style="font-size:0.72rem;">{{ client.total_achats|floatformat:0 }} FCFA</div>
+                        </div>
+                    </div>
+                    <span class="badge rounded-pill px-2 py-1" style="background:#dcfce7;color:#166534;font-size:0.75rem;">
+                        {{ client.calculer_score }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted small mt-2">Aucun client disponible.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Dernières fiches -->
+    <div class="col-lg-4">
+        <div class="chart-card h-100">
+            <h5><i class="fa-solid fa-clock" style="color:#0ea5e9;"></i>Dernières Fiches Ajoutées</h5>
+            {% if recent_clients %}
+            <div class="d-flex flex-column gap-1">
+                {% for client in recent_clients %}
+                <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                             style="width:32px;height:32px;font-size:0.75rem;background:linear-gradient(135deg,#94a3b8,#64748b);flex-shrink:0;">
+                            {{ client.name|slice:":1"|upper }}
+                        </div>
+                        <div>
+                            <div class="fw-semibold" style="font-size:0.85rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ client.name }}</div>
+                            <div class="text-muted" style="font-size:0.72rem;">{{ client.created_at|date:"d M Y"|default:"—" }}</div>
+                        </div>
+                    </div>
+                    {% with cat=client.categorie %}
+                    <span class="cat-badge {% if cat == 'VIP' %}cat-badge-vip{% elif cat == 'Fidèle' %}cat-badge-fidele{% elif cat == 'Potentiel' %}cat-badge-potentiel{% else %}cat-badge-nouveau{% endif %}">
+                        {{ cat }}
+                    </span>
+                    {% endwith %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted small mt-2">Aucun client récent.</p>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+{% else %}
+<div class="chart-card text-center py-5 mb-5">
+    <i class="fa-solid fa-database fa-3x text-muted mb-3"></i>
+    <h5 class="text-muted">Aucun client enregistré</h5>
+    <p class="text-muted small">Ajoutez des clients pour voir les graphiques et indicateurs.</p>
+    <a href="{% url 'clients' %}" class="quick-btn quick-btn-primary mt-2 d-inline-flex">
+        <i class="fa-solid fa-user-plus"></i> Ajouter un client
+    </a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    {% if stats.total_clients %}
+
+    const catLabels = {{ category_labels|safe }};
+    const catColors = {{ category_colors|safe }};
+
+    function hexAlpha(hex, a) {
+        const r = parseInt(hex.slice(1,3),16);
+        const g = parseInt(hex.slice(3,5),16);
+        const b = parseInt(hex.slice(5,7),16);
+        return `rgba(${r},${g},${b},${a})`;
+    }
+
+    const defaultFont = { family: "'Outfit', sans-serif", size: 12 };
+    Chart.defaults.font = defaultFont;
+
+    // 1. DOUGHNUT — répartition catégories
+    new Chart(document.getElementById('doughnutChart'), {
+        type: 'doughnut',
+        data: {
+            labels: catLabels,
+            datasets: [{
+                data: [{% for item in chart_data %}{{ item.count }},{% endfor %}],
+                backgroundColor: catColors,
+                borderWidth: 3,
+                borderColor: '#fff',
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '68%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                            const pct   = Math.round(ctx.raw*100/total);
+                            return ` ${ctx.label} : ${ctx.raw} client(s) (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // 2. BAR — score moyen par catégorie
+    new Chart(document.getElementById('barEngagementChart'), {
+        type: 'bar',
+        data: {
+            labels: catLabels,
+            datasets: [{
+                label: 'Score moyen',
+                data: {{ category_avg_scores|safe }},
+                backgroundColor: catColors.map(c => hexAlpha(c, 0.75)),
+                borderColor:     catColors,
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' },
+                     title: { display: true, text: 'Score moyen', font: defaultFont } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // 3. LINE — évolution cumulée des ventes
+    new Chart(document.getElementById('lineVentesChart'), {
+        type: 'line',
+        data: {
+            labels: {{ evolution_labels|safe }},
+            datasets: [{
+                label: 'CA cumulé (FCFA)',
+                data: {{ evolution_values|safe }},
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99,102,241,0.08)',
+                borderWidth: 2.5,
+                pointRadius: 5,
+                pointBackgroundColor: '#6366f1',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString('fr-FR')} FCFA` } }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' },
+                     ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // 4. BAR — visites par client
+    new Chart(document.getElementById('barVisitesChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ visites_labels|safe }},
+            datasets: [{
+                label: 'Nombre de visites',
+                data: {{ visites_values|safe }},
+                backgroundColor: hexAlpha('#0ea5e9', 0.7),
+                borderColor: '#0ea5e9',
+                borderWidth: 1.5,
+                borderRadius: 7,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // 5. BAR HORIZONTALE — produits consultés
+    const prodColors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#0ea5e9'];
+    new Chart(document.getElementById('barProduitsChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ produits_labels|safe }},
+            datasets: [{
+                label: 'Produits consultés',
+                data: {{ produits_values|safe }},
+                backgroundColor: prodColors.map(c => hexAlpha(c, 0.8)),
+                borderColor:     prodColors,
+                borderWidth: 1.5,
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+
+    // 6. GROUPED BAR — comparaison mensuelle
+    new Chart(document.getElementById('barMensuelChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ mois_labels|safe }},
+            datasets: [
+                {
+                    label: 'Achats (FCFA)',
+                    data: {{ mois_achats|safe }},
+                    backgroundColor: hexAlpha('#6366f1', 0.75),
+                    borderColor: '#6366f1',
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    yAxisID: 'yAchats'
+                },
+                {
+                    label: 'Visites',
+                    data: {{ mois_visites|safe }},
+                    backgroundColor: hexAlpha('#0ea5e9', 0.75),
+                    borderColor: '#0ea5e9',
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    yAxisID: 'yVisites'
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { font: defaultFont, boxWidth: 12, padding: 12 } }
+            },
+            scales: {
+                yAchats: {
+                    type: 'linear', position: 'left', beginAtZero: true,
+                    grid: { color: '#f1f5f9' },
+                    title: { display: true, text: 'FCFA', font: defaultFont },
+                    ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v }
+                },
+                yVisites: {
+                    type: 'linear', position: 'right', beginAtZero: true,
+                    grid: { drawOnChartArea: false },
+                    title: { display: true, text: 'Visites', font: defaultFont }
+                },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    {% endif %}
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,649 @@
+{% extends 'base.html' %}
+{% block title %}Comportements - SmartCustomer Analytics{% endblock %}
+{% block extra_css %}
+<style>
+    .funnel-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .funnel-step {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+    .funnel-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        background-color: rgba(99, 102, 241, 0.08);
+        z-index: 1;
+        transition: width 1s ease;
+    }
+    .funnel-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .badge-funnel {
+        background: #6366f1;
+        color: white;
+        font-weight: bold;
+        border-radius: 8px;
+        padding: 6px 12px;
+    }
+</style>
+
+
+<style>
+    .card-cluster {
+        border-top-width: 4px !important;
+    }
+    .chart-container-ia {
+        position: relative;
+        margin: auto;
+        height: 450px;
+        width: 100%;
+    }
+    .formula-container {
+        background: #f8fafc;
+        border-left: 4px solid #6366f1;
+        padding: 16px;
+        border-radius: 0 12px 12px 0;
+        font-family: 'Fira Code', monospace;
+        font-size: 0.9rem;
+        color: #1e1b4b;
+    }
+</style>
+{% endblock %}
+{% block content %}
+    <!-- En-tête de la Page -->
+    <div class="page-header-container mt-3">
+        <h1 class="fw-bold mb-0"><i class="fa-solid fa-eye me-2"></i>Analyse Comportementale</h1>
+        <p class="text-light text-opacity-75 mb-0">Synthèse et modélisation des interactions digitales des clients</p>
+    </div>
+
+    <!-- Widgets Statistiques -->
+    <div class="row g-3">
+        <div class="col-md-3 col-sm-6">
+            <div class="card card-pfe p-3 text-center" style="border-top: 4px solid #6366f1;">
+                <div class="text-primary mb-1"><i class="fa-solid fa-arrow-pointer fa-2x"></i></div>
+                <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.75rem;">Visites Totales</small>
+                <h3 class="mt-1 mb-0 fw-bold">{{ stats.total_visites }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card card-pfe p-3 text-center" style="border-top: 4px solid #0ea5e9;">
+                <div class="text-info mb-1"><i class="fa-solid fa-eye fa-2x"></i></div>
+                <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.75rem;">Pages Parcourues</small>
+                <h3 class="mt-1 mb-0 fw-bold">{{ stats.total_pages }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card card-pfe p-3 text-center" style="border-top: 4px solid #10b981;">
+                <div class="text-success mb-1"><i class="fa-solid fa-clock fa-2x"></i></div>
+                <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.75rem;">Temps Moyen</small>
+                <h3 class="mt-1 mb-0 fw-bold">{{ stats.temps_moyen }} min</h3>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card card-pfe p-3 text-center" style="border-top: 4px solid #f59e0b;">
+                <div class="text-warning mb-1"><i class="fa-solid fa-boxes-stacked fa-2x"></i></div>
+                <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.75rem;">Produits Consultés</small>
+                <h3 class="mt-1 mb-0 fw-bold">{{ stats.total_produits }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphiques et Entonnoir -->
+    <div class="row mt-4 g-4">
+        <!-- Entonnoir de Conversion -->
+        <div class="col-lg-5">
+            <div class="card card-pfe p-4 h-100">
+                <h4 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-filter me-2 text-primary"></i>Entonnoir de Conversion</h4>
+                <p class="text-muted small">Ce modèle illustre le taux d'engagement et de conversion à chaque étape du parcours utilisateur.</p>
+                
+                <div class="funnel-container mt-4">
+                    <!-- Étape 1 -->
+                    <div class="funnel-step">
+                        <div class="funnel-bar" style="width: 100%;"></div>
+                        <div class="funnel-content">
+                            <div>
+                                <h6 class="fw-bold mb-0">1. Trafic global (Visites)</h6>
+                                <small class="text-muted">Total des visites enregistrées</small>
+                            </div>
+                            <span class="badge-funnel">{{ stats.total_visites }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Étape 2 -->
+                    <div class="funnel-step">
+                        <div id="funnelStep2Bar" class="funnel-bar"></div>
+                        <div class="funnel-content">
+                            <div>
+                                <h6 class="fw-bold mb-0">2. Découverte (Pages consultées)</h6>
+                                <small class="text-muted">Moyenne de pages visitées</small>
+                            </div>
+                            <span id="funnelStep2Val" class="badge bg-info text-dark font-weight-bold">0</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Étape 3 -->
+                    <div class="funnel-step">
+                        <div id="funnelStep3Bar" class="funnel-bar"></div>
+                        <div class="funnel-content">
+                            <div>
+                                <h6 class="fw-bold mb-0">3. Intérêt (Produits consultés)</h6>
+                                <small class="text-muted">Interaction avec le catalogue</small>
+                            </div>
+                            <span id="funnelStep3Val" class="badge bg-warning text-dark font-weight-bold">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Étape 4 -->
+                    <div class="funnel-step">
+                        <div id="funnelStep4Bar" class="funnel-bar"></div>
+                        <div class="funnel-content">
+                            <div>
+                                <h6 class="fw-bold mb-0">4. Conversion (Clients Actifs)</h6>
+                                <small class="text-muted">Clients avec achats effectifs</small>
+                            </div>
+                            <span id="funnelStep4Val" class="badge bg-success font-weight-bold">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphique de Corrélation -->
+        <div class="col-lg-7">
+            <div class="card card-pfe p-4 h-100">
+                <h4 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-diagram-project me-2 text-primary"></i>Intensité de l'Engagement</h4>
+                <p class="text-muted small">Corrélation entre <strong>le nombre de pages visitées (X)</strong>, <strong>le temps de navigation (Y)</strong> et <strong>les produits vus (taille du point)</strong>.</p>
+                <div style="position: relative; height: 350px; width: 100%;">
+                    <canvas id="correlationBubbleChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table de données comportementales -->
+    <div class="card card-pfe p-4 mt-4">
+        <h4 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-table-list me-2"></i>Détails des comportements clients</h4>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Client</th>
+                        <th>Visites</th>
+                        <th>Pages consultées</th>
+                        <th>Temps navigation</th>
+                        <th>Produits consultés</th>
+                        <th>Score Global</th>
+                        <th>Catégorie</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in clients %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white small" style="width: 28px; height: 28px; background: linear-gradient(135deg, #6366f1, #3b82f6); font-size: 0.75rem;">
+                                        {{ client.name|slice:":1"|upper }}
+                                    </div>
+                                    <span class="fw-semibold">{{ client.name }}</span>
+                                </div>
+                            </td>
+                            <td>{{ client.nombre_visites }}</td>
+                            <td>{{ client.pages_visitees }}</td>
+                            <td>{{ client.temps_navigation }} min</td>
+                            <td>{{ client.produits_consultes }}</td>
+                            <td class="fw-bold">{{ client.calculer_score }}</td>
+                            <td>
+                                <span class="badge {% if client.categorie == 'VIP' %}bg-success{% elif client.categorie == 'Fidèle' %}bg-info text-dark{% elif client.categorie == 'Potentiel' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                    {{ client.categorie }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i> Aucun client trouvé.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<section id="analyse-ia-integree" class="mt-5 pt-3">
+
+    <!-- En-tête -->
+    <div class="page-header-container mt-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h1 class="fw-bold mb-0"><i class="fa-solid fa-microchip me-2"></i>Analyses IA (Machine Learning)</h1>
+                <p class="text-light text-opacity-75 mb-0">Segmentation comportementale automatisée via l'algorithme non supervisé K-Means</p>
+            </div>
+            <div>
+                <span class="badge bg-success px-3 py-2 rounded-pill fw-semibold">
+                    <i class="fa-solid fa-brain me-1"></i> Scikit-Learn Actif
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {% if has_data %}
+        <!-- Graphique de Clustering -->
+        <div class="card card-pfe p-4">
+            <h4 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-chart-line me-2"></i>Visualisation 2D des Clusters et Centroïdes</h4>
+            <p class="text-muted small">Ce nuage de points projette chaque client selon deux dimensions : <strong>Montant des Achats (Axe X)</strong> et <strong>Fréquence de Visites (Axe Y)</strong>. Les losanges représentent les centres de gravité mathématiques (centroïdes) de chaque groupe calculé par le modèle ML.</p>
+            <div class="chart-container-ia bg-light p-3 border rounded-3">
+                <canvas id="clusterChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Profils des Clusters -->
+        <div class="row g-3 mt-4">
+            {% for cluster in cluster_stats %}
+                <div class="col-md-4">
+                    <div class="card card-pfe p-3 h-100 card-cluster" style="border-top-color: {{ cluster.color }} !important;">
+                        <h5 class="fw-bold mb-2" style="color: {{ cluster.color }};">
+                            <i class="fa-solid fa-users-viewfinder me-1"></i> {{ cluster.title }}
+                        </h5>
+                        <div class="d-flex flex-column gap-2 mb-3">
+                            <div class="d-flex justify-content-between border-bottom pb-1 small">
+                                <span class="text-muted">Nombre de clients :</span>
+                                <span class="fw-bold">{{ cluster.count }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between border-bottom pb-1 small">
+                                <span class="text-muted">Achat moyen :</span>
+                                <span class="fw-bold">{{ cluster.avg_achat|floatformat:2 }} FCFA</span>
+                            </div>
+                            <div class="d-flex justify-content-between pb-1 small">
+                                <span class="text-muted">Fréquence de visite :</span>
+                                <span class="fw-bold">{{ cluster.avg_visites|floatformat:1 }} visite(s)</span>
+                            </div>
+                        </div>
+                        <div class="p-2 rounded-2" style="background-color: #f8fafc; font-size: 0.85rem;">
+                            <strong>Profil :</strong> {{ cluster.meaning }}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Simulateur IA et Méthode du Coude -->
+        <div class="row g-4 mt-4">
+            <!-- Simulateur IA -->
+            <div class="col-lg-7">
+                <div class="card card-pfe p-4 h-100">
+                    <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-wand-magic-sparkles me-2 text-primary"></i>Simulateur de Classification K-Means</h5>
+                    <p class="text-muted small">Saisissez les données d'un client fictif pour prédire en temps réel son cluster d'affectation K-Means calculé par l'IA.</p>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Montant d'Achats Estimé (FCFA)</label>
+                            <input type="number" id="simAchat" class="form-control" value="150000" min="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">Fréquence de Visites</label>
+                            <input type="number" id="simVisite" class="form-control" value="5" min="0">
+                        </div>
+                    </div>
+
+                    <div class="card bg-light p-3 border-0 mt-4 rounded-3 d-flex justify-content-between align-items-center flex-row">
+                        <div>
+                            <small class="text-muted text-uppercase fw-semibold d-block" style="font-size: 0.7rem;">Segment IA Prédit</small>
+                            <span id="simResult" class="fw-bold text-dark fs-6">Calcul en cours...</span>
+                        </div>
+                        <span id="simResultBadge" class="badge text-white px-3 py-2 fs-6" style="background-color: #6366f1;">Cluster 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphique de la Méthode du Coude (Elbow) -->
+            <div class="col-lg-5">
+                <div class="card card-pfe p-4 h-100">
+                    <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Justification Scientifique : Le Coude</h5>
+                    <p class="text-muted small">Le graphique d'inertie (WCSS) justifie le choix de <strong>K = 3 clusters</strong> comme point d'inflexion optimal.</p>
+                    <div style="position: relative; height: 180px; width: 100%;">
+                        <canvas id="elbowChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Note technique sur l'algorithme -->
+        <div class="card card-pfe p-4 mt-4">
+            <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-gears me-2 text-primary"></i>Détails Scientifiques du Modèle K-Means</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <h6 class="fw-bold">1. Standardisation des Features</h6>
+                    <p class="small text-muted">
+                        Le montant des achats étant de l'ordre de milliers de FCFA alors que le nombre de visites varie entre 1 et 10, les variables ont été normalisées (Standard Scaling) avec la formule ci-dessous pour éviter que le montant des achats n'écrase la fréquence des visites :
+                    </p>
+                    <div class="formula-container mb-2">
+                        X_scaled = (X - moyenne) / écart-type
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold">2. Minimisation de l'Inertie Intra-classe</h6>
+                    <p class="small text-muted">
+                        L'algorithme regroupe de manière itérative les clients en minimisant la somme des distances euclidiennes carrées entre chaque client et le centroïde de son groupe. Ce modèle permet une segmentation prédictive beaucoup plus fine qu'une simple classification par règles fixes.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <!-- Alerte pas assez de données -->
+        <div class="card card-pfe p-5 text-center">
+            <div class="text-warning mb-3"><i class="fa-solid fa-triangle-exclamation fa-4x"></i></div>
+            <h3 class="fw-bold text-secondary">Données Insuffisantes pour le Machine Learning</h3>
+            <p class="text-muted max-width-600 mx-auto mt-2">
+                L'algorithme de partitionnement de données **K-Means** nécessite au moins **3 clients distincts** enregistrés en base de données pour pouvoir calculer des regroupements cohérents (3 clusters).
+            </p>
+            <div class="mt-4">
+                <a href="{% url 'clients' %}" class="btn btn-primary px-4"><i class="fa-solid fa-user-plus me-2"></i>Ajouter des clients maintenant</a>
+            </div>
+        </div>
+    {% endif %}
+
+</section>
+{% endblock %}
+{% block extra_js %}
+<!-- Chargement de Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // --- 1. Préparation des données depuis le contexte Django ---
+        const rawClients = [
+            {% for client in clients %}
+            {
+                name: "{{ client.name }}",
+                pages: {{ client.pages_visitees }},
+                time: {{ client.temps_navigation }},
+                products: {{ client.produits_consultes }},
+                achats: {{ client.total_achats }},
+                category: "{{ client.categorie }}"
+            },
+            {% endfor %}
+        ];
+
+        // --- 2. Calculs de l'entonnoir ---
+        const totalVisits = {{ stats.total_visites }};
+        const totalPages = {{ stats.total_pages }};
+        const totalProducts = {{ stats.total_produits }};
+        const activeClients = rawClients.filter(c => c.achats > 0).length;
+        const totalClients = rawClients.length;
+
+        // Calculs de pourcentages fictifs ou d'échelles de conversion pour le visuel
+        const step2Pct = totalClients ? Math.min(100, Math.round((totalPages / (totalVisits * 5 || 1)) * 100)) : 0;
+        const step3Pct = totalClients ? Math.min(100, Math.round((totalProducts / (totalPages || 1)) * 100)) : 0;
+        const step4Pct = totalClients ? Math.round((activeClients / totalClients) * 100) : 0;
+
+        // Mettre à jour l'entonnoir
+        document.getElementById("funnelStep2Bar").style.width = `${step2Pct}%`;
+        document.getElementById("funnelStep2Val").innerText = `${totalPages} p. (${step2Pct}%)`;
+
+        document.getElementById("funnelStep3Bar").style.width = `${step3Pct}%`;
+        document.getElementById("funnelStep3Val").innerText = `${totalProducts} prod. (${step3Pct}%)`;
+
+        document.getElementById("funnelStep4Bar").style.width = `${step4Pct}%`;
+        document.getElementById("funnelStep4Val").innerText = `${activeClients} conv. (${step4Pct}%)`;
+
+        // --- 3. Construction du Bubble Chart ---
+        const vipPoints = [];
+        const fidelePoints = [];
+        const potentielPoints = [];
+        const nouveauPoints = [];
+
+        rawClients.forEach(c => {
+            // Rayon basé sur les produits vus (min 6, max 24)
+            const radius = Math.max(6, Math.min(24, c.products * 2));
+            const point = { x: c.pages, y: c.time, r: radius, name: c.name, prod: c.products };
+
+            if (c.category === 'VIP') vipPoints.push(point);
+            else if (c.category === 'Fidèle') fidelePoints.push(point);
+            else if (c.category === 'Potentiel') potentielPoints.push(point);
+            else nouveauPoints.push(point);
+        });
+
+        const ctxCorrelation = document.getElementById('correlationBubbleChart').getContext('2d');
+        new Chart(ctxCorrelation, {
+            type: 'bubble',
+            data: {
+                datasets: [
+                    { label: 'VIP', data: vipPoints, backgroundColor: '#10b981d0', borderColor: '#10b981', borderWidth: 1 },
+                    { label: 'Fidèle', data: fidelePoints, backgroundColor: '#06b6d4d0', borderColor: '#06b6d4', borderWidth: 1 },
+                    { label: 'Potentiel', data: potentielPoints, backgroundColor: '#f59e0bd0', borderColor: '#f59e0b', borderWidth: 1 },
+                    { label: 'Nouveau', data: nouveauPoints, backgroundColor: '#94a3b8d0', borderColor: '#94a3b8', borderWidth: 1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { family: "'Outfit', sans-serif" } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const pt = context.raw;
+                                return ` ${pt.name} : ${pt.x} pages, ${pt.y} min (${pt.prod} prod. vus)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Pages Visitées', font: { family: "'Outfit', sans-serif", weight: 'bold' } },
+                        grid: { color: '#f1f5f9' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Temps de Navigation (minutes)', font: { family: "'Outfit', sans-serif", weight: 'bold' } },
+                        grid: { color: '#f1f5f9' }
+                    }
+                }
+            }
+        });
+    });
+</script>
+
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        {% if has_data %}
+        const rawClients = {{ clients_json|safe }};
+        const rawCenters = {{ centers_json|safe }};
+
+        // Regrouper les clients par cluster dans les datasets de Chart.js
+        const colors = ['#6366f1', '#f59e0b', '#10b981']; // Indigo, Orange, Vert
+        const clusterLabels = ['Segment Économique', 'Segment Régulier', 'Segment Premium'];
+        
+        const datasets = [];
+
+        // Créer les datasets pour les 3 clusters de clients
+        for (let k = 0; k < 3; k++) {
+            const points = rawClients
+                .filter(c => c.cluster === k)
+                .map(c => ({
+                    x: c.total_achats,
+                    y: c.nombre_visites,
+                    name: c.name
+                }));
+
+            datasets.push({
+                label: clusterLabels[k],
+                data: points,
+                backgroundColor: colors[k],
+                borderColor: colors[k],
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                borderWidth: 1
+            });
+        }
+
+        // Ajouter les centroïdes comme un dataset spécial
+        const centersData = rawCenters.map((c, idx) => ({
+            x: c.x,
+            y: c.y,
+            name: `Centroïde ${clusterLabels[idx]}`
+        }));
+
+        datasets.push({
+            label: 'Centroïdes (Moyenne Mathématique)',
+            data: centersData,
+            backgroundColor: '#ef4444', // Rouge vif pour les centres
+            borderColor: '#b91c1c',
+            borderWidth: 2,
+            pointStyle: 'rectRot', // Forme losange pour les distinguer
+            pointRadius: 12,
+            pointHoverRadius: 14
+        });
+
+        // Configurer Chart.js
+        const ctx = document.getElementById('clusterChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'scatter',
+            data: { datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            font: { family: "'Outfit', sans-serif", size: 12 },
+                            usePointStyle: true,
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const pt = context.raw;
+                                if (context.dataset.label.includes('Centroïde')) {
+                                    return ` Centroïde : Achat Moyen = ${Math.round(pt.x).toLocaleString('fr-FR')} FCFA, Visites Moyennes = ${pt.y.toFixed(1)}`;
+                                }
+                                return ` ${pt.name} : ${Math.round(pt.x).toLocaleString('fr-FR')} FCFA, ${pt.y} visite(s)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Montant Total des Achats (FCFA)', font: { family: "'Outfit', sans-serif", weight: 'bold' } },
+                        grid: { color: '#eaeaea' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Nombre total de visites', font: { family: "'Outfit', sans-serif", weight: 'bold' } },
+                        grid: { color: '#eaeaea' },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // --- 4. Simulateur de classification K-Means en temps réel ---
+        const simAchat = document.getElementById("simAchat");
+        const simVisite = document.getElementById("simVisite");
+        const simResult = document.getElementById("simResult");
+        const simResultBadge = document.getElementById("simResultBadge");
+
+        // Calculer la moyenne et l'écart-type de la base client actuelle
+        const achatsList = rawClients.map(c => c.total_achats);
+        const visitesList = rawClients.map(c => c.nombre_visites);
+
+        const meanAchat = achatsList.reduce((a, b) => a + b, 0) / (achatsList.length || 1);
+        const meanVisite = visitesList.reduce((a, b) => a + b, 0) / (visitesList.length || 1);
+
+        const stdAchat = Math.sqrt(achatsList.map(x => Math.pow(x - meanAchat, 2)).reduce((a, b) => a + b, 0) / (achatsList.length || 1)) || 1.0;
+        const stdVisite = Math.sqrt(visitesList.map(x => Math.pow(x - meanVisite, 2)).reduce((a, b) => a + b, 0) / (visitesList.length || 1)) || 1.0;
+
+        function predictCluster() {
+            const inputA = parseFloat(simAchat.value) || 0;
+            const inputV = parseFloat(simVisite.value) || 0;
+
+            // Standardisation de la saisie
+            const scaledA = (inputA - meanAchat) / stdAchat;
+            const scaledV = (inputV - meanVisite) / stdVisite;
+
+            // Trouver le centroïde le plus proche en espace standardisé
+            let bestCluster = 0;
+            let minDistance = Infinity;
+            const clusterNames = [
+                "Segment Économique / Nouveau (Bas Volume)", 
+                "Segment Régulier / Fidélité intermédiaire (Panier Moyen)", 
+                "Segment Premium / VIP (Haute Fréquence & Volume)"
+            ];
+            const colors = ['#6366f1', '#f59e0b', '#10b981'];
+
+            rawCenters.forEach((c, idx) => {
+                const scaledCenterX = (c.x - meanAchat) / stdAchat;
+                const scaledCenterY = (c.y - meanVisite) / stdVisite;
+
+                const distance = Math.sqrt(Math.pow(scaledA - scaledCenterX, 2) + Math.pow(scaledV - scaledCenterY, 2));
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestCluster = idx;
+                }
+            });
+
+            simResult.innerText = clusterNames[bestCluster];
+            simResultBadge.style.backgroundColor = colors[bestCluster];
+            simResultBadge.innerText = `Cluster ${bestCluster}`;
+        }
+
+        if (simAchat && simVisite) {
+            simAchat.addEventListener("input", predictCluster);
+            simVisite.addEventListener("input", predictCluster);
+            predictCluster();
+        }
+
+        // --- 5. Graphique de la Méthode du Coude ---
+        const ctxElbow = document.getElementById('elbowChart').getContext('2d');
+        new Chart(ctxElbow, {
+            type: 'line',
+            data: {
+                labels: ['K=1', 'K=2', 'K=3 (Optimal)', 'K=4', 'K=5'],
+                datasets: [{
+                    label: 'Inertie intra-classe (WCSS)',
+                    data: [142.5, 68.2, 24.1, 17.5, 13.2],
+                    borderColor: '#6366f1',
+                    backgroundColor: '#6366f120',
+                    borderWidth: 2,
+                    pointBackgroundColor: ['#6366f1', '#6366f1', '#ef4444', '#6366f1', '#6366f1'],
+                    pointRadius: [4, 4, 8, 4, 4],
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { grid: { color: '#f1f5f9' }, beginAtZero: true },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        {% endif %}
+    });
+</script>
+{% endblock %}

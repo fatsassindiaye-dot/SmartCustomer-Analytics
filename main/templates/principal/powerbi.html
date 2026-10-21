@@ -1,0 +1,465 @@
+{% extends 'base.html' %}
+
+{% block title %}Analyses BI - SmartCustomer Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Power BI Canvas Container */
+    .pbi-frame {
+        background-color: #eaeaea;
+        border: 1px solid #c8c8c8;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    /* PBI Top Toolbar */
+    .pbi-topbar {
+        background-color: #f3f3f3;
+        border-bottom: 1px solid #d2d2d2;
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        color: #555;
+    }
+
+    /* PBI Dashboard Canvas Area */
+    .pbi-canvas {
+        background-color: #f1f1f1;
+        padding: 20px;
+        min-height: 600px;
+    }
+
+    /* PBI Slicers (Filtres) */
+    .pbi-slicer-box {
+        background-color: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    /* PBI KPI Cards */
+    .pbi-card {
+        background-color: white;
+        border-top: 4px solid #f2c811; /* Jaune Power BI */
+        border-left: 1px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 12px;
+        text-align: center;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+    }
+
+    .pbi-card-val {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #252423;
+        margin: 4px 0 0 0;
+    }
+
+    .pbi-card-lbl {
+        font-size: 0.75rem;
+        text-uppercase: true;
+        color: #605e5c;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    /* PBI Visual Containers (Graphs) */
+    .pbi-visual {
+        background-color: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .pbi-visual-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #252423;
+        border-bottom: 1px solid #f3f2f1;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+    }
+
+    .chart-container-pbi {
+        position: relative;
+        flex-grow: 1;
+        height: 260px;
+        width: 100%;
+    }
+
+    /* PBI Bottom Status Bar */
+    .pbi-statusbar {
+        background-color: #252423;
+        color: white;
+        padding: 8px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.75rem;
+    }
+
+    .pbi-tab {
+        background-color: #3b3a39;
+        border: 1px solid #484644;
+        color: #f3f2f1;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+
+    .pbi-logo {
+        color: #f2c811;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <!-- En-tête -->
+    <div class="page-header-container mt-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h1 class="fw-bold mb-0"><i class="fa-solid fa-chart-column me-2"></i>Analyses Décisionnelles (Power BI)</h1>
+                <p class="text-light text-opacity-75 mb-0">Visualisation multidimensionnelle et Business Intelligence décisionnelle</p>
+            </div>
+            <div>
+                <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-semibold">
+                    <i class="fa-solid fa-graduation-cap me-1"></i> Dashboard Décisionnel PFE
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Power BI Frame Wrapper -->
+    <div class="pbi-frame">
+        <!-- Top Toolbar -->
+        <div class="pbi-topbar">
+            <div>
+                <span class="fw-bold text-dark"><i class="fa-solid fa-file-invoice-dollar text-warning me-2"></i>SmartCustomer Analytics - Décisionnel</span>
+            </div>
+            <div class="d-flex gap-3">
+                <span><i class="fa-solid fa-rotate me-1"></i> Statut : Données Synchronisées (Base SQLite)</span>
+                <span><i class="fa-solid fa-download me-1"></i> Mode d'affichage : Intégré</span>
+            </div>
+        </div>
+
+        <!-- Dashboard Canvas -->
+        <div class="pbi-canvas">
+            <!-- Row 1: Slicers (Filtres interactifs) -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="pbi-slicer-box">
+                        <label class="form-label fw-bold small text-secondary mb-2"><i class="fa-solid fa-filter me-1 text-warning"></i> Slicer : Segment / Catégorie de Client</label>
+                        <select id="slicerCategory" class="form-select form-select-sm">
+                            <option value="Toutes">Toutes les catégories</option>
+                            <option value="VIP">VIP</option>
+                            <option value="Fidèle">Fidèle</option>
+                            <option value="Potentiel">Potentiel</option>
+                            <option value="Nouveau">Nouveau</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="pbi-slicer-box">
+                        <label class="form-label fw-bold small text-secondary mb-2" id="labelAchatRange"><i class="fa-solid fa-wallet me-1 text-warning"></i> Slicer : Seuil d'Achat Minimum (0 FCFA)</label>
+                        <input type="range" class="form-range" id="slicerAchat" min="0" max="500000" step="10000" value="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: KPI Cards -->
+            <div class="row g-3 mb-4" id="kpiContainer">
+                <div class="col-md-3 col-sm-6">
+                    <div class="pbi-card">
+                        <p class="pbi-card-lbl">Chiffre d'Affaires</p>
+                        <p class="pbi-card-val" id="kpiCA">0 FCFA</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="pbi-card">
+                        <p class="pbi-card-lbl">Score Moyen</p>
+                        <p class="pbi-card-val" id="kpiScore">0.0</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="pbi-card">
+                        <p class="pbi-card-lbl">Nombre de Visites</p>
+                        <p class="pbi-card-val" id="kpiVisites">0</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="pbi-card">
+                        <p class="pbi-card-lbl">Clients Sélectionnés</p>
+                        <p class="pbi-card-val" id="kpiCount">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 3: Graphs (Chart.js) -->
+            <div class="row g-3">
+                <!-- Graph 1: Top Chiffre d'affaires par Client -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="pbi-visual">
+                        <div class="pbi-visual-title"><i class="fa-solid fa-chart-column text-warning me-2"></i>Palmarès du CA par Client (FCFA)</div>
+                        <div class="chart-container-pbi">
+                            <canvas id="chartCA"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graph 2: Corrélation Visites vs Navigation -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="pbi-visual">
+                        <div class="pbi-visual-title"><i class="fa-solid fa-circle-scatter text-warning me-2"></i>Corrélation : Visites vs Navigation</div>
+                        <div class="chart-container-pbi">
+                            <canvas id="chartCorrelation"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graph 3: CA Cumulé par Catégorie -->
+                <div class="col-lg-4 col-md-12">
+                    <div class="pbi-visual">
+                        <div class="pbi-visual-title"><i class="fa-solid fa-chart-pie text-warning me-2"></i>CA Cumulé par Catégorie (FCFA)</div>
+                        <div class="chart-container-pbi">
+                            <canvas id="chartPie"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Status Bar -->
+        <div class="pbi-statusbar">
+            <div class="d-flex align-items-center gap-2">
+                <span class="pbi-tab">Dashboard décisionnel</span>
+                <span class="text-muted">Page 1 de 1</span>
+            </div>
+            <div>
+                <span class="pbi-logo"><i class="fa-solid fa-chart-bar me-1"></i>Microsoft Power BI</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mode d'emploi Decisionnel -->
+    <div class="card card-pfe p-4 mt-4">
+        <h5 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-graduation-cap me-2 text-primary"></i>Note de Soutenance PFE : Approche Décisionnelle</h5>
+        <p class="text-muted mb-0">
+            Ce module simule l'intégration d'un outil décisionnel (OLAP) connecté en direct à votre base de données. Pendant votre soutenance, vous pouvez expliquer au jury que vous utilisez des scripts d'agrégation et d'interfaçage JS pour offrir des filtres multidimensionnels instantanés sans surcharger le serveur de base de données.
+        </p>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Extraction sûre des données transmises par Django
+        const rawClients = {{ clients_json|safe }};
+        
+        // Initialisation des variables globales pour les graphiques
+        let chartInstanceCA = null;
+        let chartInstanceCorrelation = null;
+        let chartInstancePie = null;
+
+        // Références DOM
+        const slicerCategory = document.getElementById('slicerCategory');
+        const slicerAchat = document.getElementById('slicerAchat');
+        const labelAchatRange = document.getElementById('labelAchatRange');
+        
+        const kpiCA = document.getElementById('kpiCA');
+        const kpiScore = document.getElementById('kpiScore');
+        const kpiVisites = document.getElementById('kpiVisites');
+        const kpiCount = document.getElementById('kpiCount');
+
+        // Détecter le montant maximal des achats dans le dataset
+        if (rawClients.length > 0) {
+            const maxAchat = Math.max(...rawClients.map(c => c.total_achats));
+            slicerAchat.max = Math.ceil(maxAchat);
+        }
+
+        // Fonction de filtrage et d'actualisation du dashboard
+        function updateDashboard() {
+            const catFilter = slicerCategory.value;
+            const minAchat = parseFloat(slicerAchat.value) || 0;
+
+            // Mettre à jour l'étiquette du curseur d'achat
+            labelAchatRange.innerHTML = `<i class="fa-solid fa-wallet me-1 text-warning"></i> Slicer : Seuil d'Achat Minimum (${minAchat.toLocaleString('fr-FR')} FCFA)`;
+
+            // Filtrer les clients
+            const filtered = rawClients.filter(c => {
+                const matchCat = (catFilter === 'Toutes' || c.categorie === catFilter);
+                const matchAchat = (c.total_achats >= minAchat);
+                return matchCat && matchAchat;
+            });
+
+            // Calculer les métriques KPI
+            const count = filtered.length;
+            const totalCA = filtered.reduce((sum, c) => sum + c.total_achats, 0);
+            const totalVisites = filtered.reduce((sum, c) => sum + c.nombre_visites, 0);
+            const avgScore = count > 0 ? (filtered.reduce((sum, c) => sum + c.score, 0) / count).toFixed(1) : 0;
+
+            // Mettre à jour l'affichage des KPIs
+            kpiCA.innerText = `${Math.round(totalCA).toLocaleString('fr-FR')} FCFA`;
+            kpiScore.innerText = avgScore;
+            kpiVisites.innerText = totalVisites.toLocaleString('fr-FR');
+            kpiCount.innerText = count.toLocaleString('fr-FR');
+
+            // --- GRAPHIQUE 1 : Palmarès CA ---
+            // Trier les clients filtrés par CA décroissant
+            const sortedCA = [...filtered].sort((a, b) => b.total_achats - a.total_achats).slice(0, 10);
+            const labelsCA = sortedCA.map(c => c.name);
+            const dataCA = sortedCA.map(c => c.total_achats);
+
+            if (chartInstanceCA) {
+                chartInstanceCA.destroy();
+            }
+
+            const ctxCA = document.getElementById('chartCA').getContext('2d');
+            chartInstanceCA = new Chart(ctxCA, {
+                type: 'bar',
+                data: {
+                    labels: labelsCA,
+                    datasets: [{
+                        label: 'Chiffre d\'Affaires (FCFA)',
+                        data: dataCA,
+                        backgroundColor: '#f2c811', // Jaune Power BI
+                        borderColor: '#d1ab0e',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#eaeaea' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // --- GRAPHIQUE 2 : Corrélation ---
+            const dataCorrelation = filtered.map(c => ({
+                x: c.nombre_visites,
+                y: c.temps_navigation,
+                label: c.name
+            }));
+
+            if (chartInstanceCorrelation) {
+                chartInstanceCorrelation.destroy();
+            }
+
+            const ctxCorrelation = document.getElementById('chartCorrelation').getContext('2d');
+            chartInstanceCorrelation = new Chart(ctxCorrelation, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Relations Clients',
+                        data: dataCorrelation,
+                        backgroundColor: '#118d95', // Bleu-vert décisionnel
+                        borderColor: '#0a646a',
+                        borderWidth: 1,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const rawPoint = context.raw;
+                                    return ` ${rawPoint.label} : ${rawPoint.x} visites, ${rawPoint.y} min`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Nombre de Visites' },
+                            grid: { color: '#eaeaea' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Temps de Navigation (min)' },
+                            grid: { color: '#eaeaea' }
+                        }
+                    }
+                }
+            });
+
+            // --- GRAPHIQUE 3 : CA Cumulé par Catégorie ---
+            const caByCat = { VIP: 0, 'Fidèle': 0, Potentiel: 0, Nouveau: 0 };
+            filtered.forEach(c => {
+                if (caByCat[c.categorie] !== undefined) {
+                    caByCat[c.categorie] += c.total_achats;
+                }
+            });
+
+            const labelsPie = Object.keys(caByCat);
+            const dataPie = Object.values(caByCat);
+            const colorsPie = ['#198754', '#0ea5e9', '#f59e0b', '#94a3b8'];
+
+            if (chartInstancePie) {
+                chartInstancePie.destroy();
+            }
+
+            const ctxPie = document.getElementById('chartPie').getContext('2d');
+            chartInstancePie = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: labelsPie,
+                    datasets: [{
+                        data: dataPie,
+                        backgroundColor: colorsPie,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 10,
+                                font: { size: 10, family: "'Outfit', sans-serif" }
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+
+        // Ecouteurs d'événements pour les filtres (Slicers)
+        slicerCategory.addEventListener('change', updateDashboard);
+        slicerAchat.addEventListener('input', updateDashboard);
+
+        // Lancement initial
+        updateDashboard();
+    });
+</script>
+{% endblock %}
