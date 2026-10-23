@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Analyse intelligente - SmartCustomer Analytics{% endblock %}
+
+{% block content %}
+<div class="page-header-container mt-3">
+    <h1 class="fw-bold mb-1"><i class="fa-solid fa-robot me-2"></i>Analyse intelligente</h1>
+    <p class="text-light text-opacity-75 mb-0">Segmentation des clients selon les achats et la fréquence des visites</p>
+</div>
+
+{% if has_data %}
+    <div class="row g-3 mb-4">
+        {% for cluster in cluster_stats %}
+            <div class="col-md-4">
+                <article class="card card-pfe h-100 p-3">
+                    <h2 class="h5 fw-bold" style="color: {{ cluster.color }}">{{ cluster.title }}</h2>
+                    <p class="mb-1">{{ cluster.meaning }}</p>
+                    <p class="mb-0"><strong>{{ cluster.count }}</strong> client(s) ·
+                        Achats moyens : {{ cluster.avg_achat|floatformat:2 }} ·
+                        Visites moyennes : {{ cluster.avg_visites|floatformat:2 }}</p>
+                </article>
+            </div>
+        {% endfor %}
+    </div>
+    <section class="card card-pfe p-4">
+        <h2 class="h5 fw-bold">Répartition des clients</h2>
+        <div style="height: 380px"><canvas id="clientClusters" aria-label="Nuage de points des clients segmentés"></canvas></div>
+    </section>
+    {{ clients_data|json_script:"cluster-clients-data" }}
+    {{ centers_data|json_script:"cluster-centers-data" }}
+{% else %}
+    <section class="card card-pfe p-4 text-center">
+        <h2 class="h4 fw-bold">Données insuffisantes</h2>
+        <p class="mb-0">Ajoutez au moins trois clients pour lancer la segmentation par groupes.</p>
+    </section>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if has_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const clients = JSON.parse(document.getElementById("cluster-clients-data").textContent);
+    const centers = JSON.parse(document.getElementById("cluster-centers-data").textContent);
+    const colors = ["#6366f1", "#f59e0b", "#10b981"];
+    const datasets = colors.map((color, cluster) => ({
+        label: ["Économique / Nouveau", "Régulier / Fidélité", "Premium / VIP"][cluster],
+        data: clients
+            .filter(client => client.cluster === cluster)
+            .map(client => ({ x: client.total_achats, y: client.nombre_visites, name: client.name })),
+        backgroundColor: color
+    }));
+    datasets.push({
+        label: "Centres des groupes",
+        data: centers,
+        backgroundColor: "#111827",
+        pointStyle: "rectRot",
+        pointRadius: 9
+    });
+    new Chart(document.getElementById("clientClusters"), {
+        type: "scatter",
+        data: { datasets },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                x: { title: { display: true, text: "Total des achats" } },
+                y: { title: { display: true, text: "Nombre de visites" } }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

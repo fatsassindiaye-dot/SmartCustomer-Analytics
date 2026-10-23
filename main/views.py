@@ -504,8 +504,8 @@ def analyses_ia(request):
 
         context = {
             "has_data": True,
-            "clients_json": json.dumps(clients_json),
-            "centers_json": json.dumps(centers_json),
+            "clients_data": clients_json,
+            "centers_data": centers_json,
             "cluster_stats": cluster_stats
         }
     else:
@@ -515,7 +515,6 @@ def analyses_ia(request):
         }
 
     return render(request, "principal/ia.html", context)
-
 
 
 

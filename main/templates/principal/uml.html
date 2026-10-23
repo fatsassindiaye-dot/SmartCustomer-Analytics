@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Modèle de données - SmartCustomer Analytics{% endblock %}
+
+{% block content %}
+<div class="page-header-container mt-3">
+    <h1 class="fw-bold mb-1"><i class="fa-solid fa-diagram-project me-2"></i>Modèle de données</h1>
+    <p class="text-light text-opacity-75 mb-0">Structure simplifiée de l’application SmartCustomer Analytics</p>
+</div>
+
+<section class="card card-pfe p-4 mb-4">
+    <h2 class="h4 fw-bold">Entité Client</h2>
+    <p>Chaque fiche client rassemble les coordonnées et les indicateurs comportementaux utilisés pour la segmentation.</p>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle mb-0">
+            <thead>
+                <tr><th>Champ</th><th>Rôle</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>client_id</td><td>Identifiant client lisible et unique</td></tr>
+                <tr><td>name, email, telephone</td><td>Coordonnées du client</td></tr>
+                <tr><td>total_achats</td><td>Montant total des achats</td></tr>
+                <tr><td>nombre_visites, pages_visitees</td><td>Fréquentation et navigation</td></tr>
+                <tr><td>temps_navigation, produits_consultes</td><td>Engagement sur le site</td></tr>
+                <tr><td>created_at</td><td>Date de création de la fiche</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="card card-pfe p-4">
+    <h2 class="h4 fw-bold">Traitement des données</h2>
+    <ol class="mb-0">
+        <li>Les vues Django lisent et mettent à jour les fiches client.</li>
+        <li>Le modèle calcule le score, la probabilité d’achat et la catégorie.</li>
+        <li>Les analyses agrègent ces indicateurs pour afficher les tableaux de bord et les segments.</li>
+    </ol>
+</section>
+{% endblock %}
